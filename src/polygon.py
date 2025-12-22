@@ -8,7 +8,8 @@ class Polygon:
     # Gauss formula
     def area(self) -> float:
         n = len(self.vertices)
-        if n < 3: return 0.0
+        if n < 3:
+            return 0.0
         area = 0.0
         for i in range(n):
             j = (i + 1) % n
@@ -24,3 +25,60 @@ class Polygon:
             signed_area += (self.vertices[i].x * self.vertices[j].y)
             signed_area -= (self.vertices[j].x * self.vertices[i].y)
         return signed_area < 0
+
+class MiterOffsetStrategy():
+    def apply(self, polygon: Polygon, d: float) -> List[Polygon]:
+        if abs(d) < 1e-9:
+            return [polygon]
+
+        actual_d = d if polygon.is_clockwise() else -d
+        vertices = polygon.vertices
+        n = len(vertices)
+        new_points = []
+        original_area = polygon.area()
+
+        for i in range(n):
+            p_prev = vertices[(i - 1) % n]
+            p_curr = vertices[i]
+            p_next = vertices[(i + 1) % n]
+            l1 = Line.from_offset_edge(p_prev, p_curr, actual_d)
+            l2 = Line.from_offset_edge(p_curr, p_next, actual_d)
+            p_int = l1.intersect(l2)
+            if p_int:
+                new_points.append(p_int)
+
+        result_polys = self._process_points(new_points)
+        valid_polys = []
+        for p in result_polys:
+            if d < 0 and p.area() > original_area:
+                continue
+            if p.area() > 1e-4:
+                valid_polys.append(p)
+        return valid_polys
+
+    # Logic for separating into 2 polygons
+    def _process_points(self, points: List[Point]) -> List[Polygon]:
+        res = []
+        current_points = list(points)
+
+        while len(current_points) >= 3:
+            loop_found = False
+            for i in range(len(current_points)):
+                for j in range(i + 1, len(current_points)):
+                    if current_points[i] == current_points[j]:
+                        loop = current_points[i:j]
+                        poly = Polygon(loop)
+                        if poly.area() > 1e-4:
+                            res.append(poly)
+
+                        current_points = current_points[:i] + current_points[j:]
+                        loop_found = True
+                        break
+                if loop_found: break
+            if not loop_found:
+                poly = Polygon(current_points)
+                if poly.area() > 1e-4:
+                    res.append(poly)
+                break
+
+        return res

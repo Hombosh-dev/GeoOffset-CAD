@@ -18,39 +18,31 @@ class Point:
 class Vector:
     @staticmethod
     def get_unit_normal(p1: Point, p2: Point) -> Point:
-        dx = p2.x - p1.x
-        dy = p2.y - p1.y
-
+        dx, dy = p2.x - p1.x, p2.y - p1.y
         length = sqrt(dx**2 + dy**2)
-
+        if length < 1e-9:
+            return Point(0, 0)
         return Point(-dy / length, dx / length)
 
 class Line:
-    """
-    Line: Ax + By = C
-    """
     def __init__(self, a: float, b: float, c: float):
-        self.a = a
-        self.b = b
-        self.c = c
+        self.a, self.b, self.c = a, b, c
 
     @classmethod
     def from_offset_edge(cls, p1: Point, p2: Point, d: float) -> 'Line':
         n = Vector.get_unit_normal(p1, p2)
         new_p1 = p1 + (n * d)
-        new_p2 = p1 + (n * d)
+        new_p2 = p2 + (n * d)
 
         a = new_p1.y - new_p2.y
         b = new_p2.x - new_p1.x
         c = a * new_p1.x + b * new_p1.y
-        return cls(a,b,c)
+        return cls(a, b, c)
 
-
-    def intersect(self, other: 'Line') -> Optional[Point] | None:
+    def intersect(self, other: 'Line') -> Optional[Point]:
         det = self.a * other.b - other.a * self.b
-        if int(det) == 0:
+        if abs(det) < 1e-9:
             return None
         det_x = self.c * other.b - self.b * other.c
         det_y = self.a * other.c - self.c * other.a
-
-        return Point(det_x/det, det_y/det)
+        return Point(det_x / det, det_y / det)
