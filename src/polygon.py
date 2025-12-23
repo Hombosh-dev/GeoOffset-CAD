@@ -31,32 +31,68 @@ class MiterOffsetStrategy():
         if abs(d) < 1e-9:
             return [polygon]
 
-        actual_d = d if polygon.is_clockwise() else -d
+        original_is_cw = polygon.is_clockwise()
+        original_area = polygon.area()
+        actual_d = d if original_is_cw else -d
         vertices = polygon.vertices
         n = len(vertices)
         new_points = []
-        original_area = polygon.area()
 
         for i in range(n):
             p_prev = vertices[(i - 1) % n]
             p_curr = vertices[i]
             p_next = vertices[(i + 1) % n]
+
             l1 = Line.from_offset_edge(p_prev, p_curr, actual_d)
             l2 = Line.from_offset_edge(p_curr, p_next, actual_d)
             p_int = l1.intersect(l2)
             if p_int:
                 new_points.append(p_int)
 
-        result_polys = self._process_points(new_points)
+        points_with_nodes = self._inject_intersections(new_points)
+        candidate_polys = self._process_points(points_with_nodes)
         valid_polys = []
-        for p in result_polys:
-            if d < 0 and p.area() > original_area:
+        for p in candidate_polys:
+            if p.area() < 1e-4:
                 continue
-            if p.area() > 1e-4:
-                valid_polys.append(p)
+            if d < 0:
+                if p.is_clockwise() != original_is_cw:
+                    continue
+                if p.area() > original_area:
+                    continue
+            valid_polys.append(p)
+
         return valid_polys
 
-    # Logic for separating into 2 polygons
+    # Logic for separating 2 polygons
+    def _inject_intersections(self, points: List[Point]) -> List[Point]:
+        result = list(points)
+        changed = True
+
+        while changed:
+            changed = False
+            n = len(result)
+            for i in range(n):
+                p1, p2 = result[i], result[(i + 1) % n]
+                for j in range(i + 2, n):
+                    if (i == 0 and j == n - 1):
+                        continue
+                    p3, p4 = result[j], result[(j + 1) % n]
+                    l1 = Line.from_points(p1, p2)
+                    l2 = Line.from_points(p3, p4)
+                    inter = l1.intersect(l2)
+                    if inter:
+                        if (inter.is_on_segment(p1, p2) and inter.is_on_segment(p3, p4)):
+                            if (inter == p1 or inter == p2 or inter == p3 or inter == p4):
+                                continue
+                            result.insert(j + 1, inter)
+                            result.insert(i + 1, inter)
+                            changed = True
+                            break
+                if changed:
+                    break
+        return result
+
     def _process_points(self, points: List[Point]) -> List[Polygon]:
         res = []
         current_points = list(points)
