@@ -54,8 +54,8 @@ def visualize_all_cases():
 
     # --- Split ---
     case5_in = [(2, 9), (8, 9), (8, 2), (6, 2), (6, 8), (4, 8), (4, 2), (2, 2)]
-    res5 = service.offset_polygon(case5_in, d=-1)
-    plot_case(axes[4], "Case 5: Split (Shrink d=-1)", case5_in, res5)
+    res5 = service.offset_polygon(case5_in, d=-0.6)
+    plot_case(axes[4], "Case 5: Split (Shrink d=-0.6)", case5_in, res5)
 
     # --- CW/CWW ---
     cw_square = [(0, 0), (0, 5), (5, 5), (5, 0)]
